@@ -75,7 +75,6 @@ void loop(){
               //client.println();
               LoraSX1278_requestData(MEASUREMENT_DEVICE_ADDR, BRIDGE_DEVICE_ADDR, REQUEST_BYTE_1, REQUEST_BYTE_2);
               LoraSX1278_receiveData();
-              delay(2000); //sampling
             }else if(header.indexOf("GET /sample/off") >= 0){
               sampleState = "off"; 
             }
