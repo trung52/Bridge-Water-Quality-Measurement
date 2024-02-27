@@ -72,9 +72,20 @@ void loop(){
             if (header.indexOf("GET /sample/on") >= 0) {
               Serial.println("Sampling...");
               sampleState = "on";
-              //client.println();
               LoraSX1278_requestData(MEASUREMENT_DEVICE_ADDR, BRIDGE_DEVICE_ADDR, REQUEST_BYTE_1, REQUEST_BYTE_2);
-              LoraSX1278_receiveData();
+              uint8_t _errorCode = LoraSX1278_receiveData();
+              if(_errorCode != ERROR_NONE){
+                if(_errorCode == ERROR_LORA_SX1278_RECEIVE_TIMEOUT){
+                  sampleState = "timeout";
+                }
+                else sampleState = "failed";
+                dateTime = "0000-00-00T00:00:00";
+                latitude = "0.0";
+                longitude = "0.0";
+                depth = "0.0";
+                temp = "0.0";
+                DO_value = "0";
+              }
             }else if(header.indexOf("GET /sample/off") >= 0){
               sampleState = "off"; 
             }
@@ -99,9 +110,9 @@ void loop(){
             client.println("<body><h4>Date Time: " + dateTime 
                                 + "\tLatitude: "+ latitude 
                                 +"\tLongitude: "+ longitude 
-                                +"\tDepth: "+ depth 
-                                +"\tTemp: "+ temp 
-                                +"\tDO Value: "+ DO_value +"</h4>");
+                                +"\tDepth: "+ depth + "mm"
+                                +"\tTemp: "+ temp + "oC"
+                                +"\tDO Value: "+ DO_value +"ug/L</h4>");
             
             // client.println("<body><h4>Date Time: " + String(dataSplited[0]) 
             //                     + "\tLatitude: "+ String(dataSplited[1]) 

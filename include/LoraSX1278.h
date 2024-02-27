@@ -23,6 +23,7 @@
 #define ERROR_LORA_SX1278_DATA_LENGTH_MISMATCH 0x03
 #define ERROR_LORA_SX1278_ADDR_MISMATCH 0x04
 #define ERROR_LORA_SX1278_REQUEST_MISMATCH 0x05
+#define ERROR_LORA_SX1278_RECEIVE_TIMEOUT 0x06
 
 // Packet structure sent from measurement device: DEST_ADDR | SRC_ADDR | DATA_LEN | DATA
 // Packet structure sent from bridge device: DEST_ADDR | SRC_ADDR | REQUEST_BYTE_1 | REQUEST_BYTE_2 
@@ -67,7 +68,7 @@ void LoraSX1278_requestData(uint8_t dest_addr, uint8_t src_addr, uint8_t request
  * @brief Receive data from measurement device
  * @param packetSize: packet size
 */
-void LoraSX1278_receiveData();
+ERROR_CODE LoraSX1278_receiveData();
 
 /**
  * @brief Receive request from bridge device

@@ -48,12 +48,14 @@ void LoraSX1278_requestData(uint8_t dest_addr, uint8_t src_addr, uint8_t request
     Serial.println("Send request completely!");
 }
 
-void LoraSX1278_receiveData(){
-    Serial.println("abc");
+ERROR_CODE LoraSX1278_receiveData(){
     int packetSize = LoRa.parsePacket();
+    uint32_t startReceive = millis();
    // if (packetSize == 0) return;          // if there's no packet, return
     while(!packetSize){
-        delay(100);
+        if(millis()-startReceive > 20000){
+            return ERROR_LORA_SX1278_RECEIVE_TIMEOUT;
+        }
         packetSize = LoRa.parsePacket();
     }
     // read packet header bytes:
@@ -68,14 +70,14 @@ void LoraSX1278_receiveData(){
     }
 
     if (incomingDataLength != incomingData.length()) {   // check length for error
-      //log_e("Datalength does not match length.");
-      return;
+      Serial.println("Datalength does not match length.");
+      return ERROR_LORA_SX1278_DATA_LENGTH_MISMATCH;
     }
 
     // if the recipient isn't this device or broadcast,
     if (recipient != BRIDGE_DEVICE_ADDR && recipient != 0xFF) {
-      //log_e("This message is not for this device.");
-      return;
+      Serial.println("This message is not for this device.");
+      return ERROR_LORA_SX1278_ADDR_MISMATCH;
     }
 
     //split dataString
@@ -106,6 +108,7 @@ void LoraSX1278_receiveData(){
     Serial.println("RSSI: " + String(LoRa.packetRssi()));
     Serial.println("Snr: " + String(LoRa.packetSnr()));
     Serial.println();
+    return ERROR_NONE;
 }   
 
 void LoraSX1278_receiveRequest(int packetSize ){
