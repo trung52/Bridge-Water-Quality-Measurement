@@ -25,6 +25,7 @@ String longitude;
 String depth;
 String temp;
 String DO_value;
+float densityWater = 1.0;
 void setup() {
   Serial.begin(9600);
   // Connect to Wi-Fi network with SSID and password
@@ -69,19 +70,29 @@ void loop(){
             client.println("Content-type:text/html");
             client.println("Connection: close");
             client.println();
-            if (header.indexOf("GET /sample/on") >= 0) {
+            if (header.indexOf("POST /sample/on") >= 0) {
+              // Read data from the client
+              String line = client.readStringUntil('\r');
+              // Parse the data
+              if (line.startsWith("dataInput=")) {
+                String inputData = line.substring(10);
+                densityWater = inputData.toFloat();
+                Serial.println(densityWater);
+              }
+            }
+            if (header.indexOf("GET /sample/on") >= 0) {              
               Serial.println("Sampling...");
               sampleState = "on";
-              LoraSX1278_requestData(MEASUREMENT_DEVICE_ADDR, BRIDGE_DEVICE_ADDR, REQUEST_BYTE_1, REQUEST_BYTE_2);
+              LoraSX1278_requestData(MEASUREMENT_DEVICE_ADDR, BRIDGE_DEVICE_ADDR, REQUEST_BYTE_1, REQUEST_BYTE_2, densityWater);
               uint8_t _errorCode = LoraSX1278_receiveData();
               if(_errorCode != ERROR_NONE){
                 if(_errorCode == ERROR_LORA_SX1278_RECEIVE_TIMEOUT){
                   sampleState = "timeout";
                 }
-                else sampleState = "failed";
+                else {sampleState = "failed";}
                 dateTime = "0000-00-00T00:00:00";
-                latitude = "0.0";
-                longitude = "0.0";
+                latitude = "0.000000";
+                longitude = "0.000000";
                 depth = "0.0";
                 temp = "0.0";
                 DO_value = "0";
@@ -89,7 +100,7 @@ void loop(){
             }else if(header.indexOf("GET /sample/off") >= 0){
               sampleState = "off"; 
             }
-            
+
             // Display the HTML web page
             client.println("<!DOCTYPE html><html>");
             client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
@@ -99,8 +110,6 @@ void loop(){
             client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
             client.println(".button{padding:16px 40px;background-color:#4CAF50;color:white;border:none;border-radius:5px;transition:background-color 0.3s;font-size: 30px;font-weight: bold;}button:hover{background-color:#45A049;}");
             client.println(".button2 {background-color: #555555;}.button2:hover{background-color:#3D3D3D;}</style></head>");
-            // client.println("<head><style>button{padding:16px 40px;background-color:#4CAF50;color:white;border:none;border-radius:5px;transition:background-color 0.3s;font-size: 30px;font-weight: bold;}button:hover{background-color:#45a049;}</style></head>");
-            // client.println("<body><button onclick='displayWait()'>Sample</button><script>function displayWait(){var button=document.getElementsByTagName('button')[0];button.innerHTML='Waiting...';setTimeout(function(){button.innerHTML='Sample';},5000);}</script></body>");
             
             // Web Page Heading
             client.println("<body><h1>Water Quality Measurement</h1>");
@@ -113,26 +122,26 @@ void loop(){
                                 +"\tDepth: "+ depth + "mm"
                                 +"\tTemp: "+ temp + "oC"
                                 +"\tDO Value: "+ DO_value +"ug/L</h4>");
-            
-            // client.println("<body><h4>Date Time: " + String(dataSplited[0]) 
-            //                     + "\tLatitude: "+ String(dataSplited[1]) 
-            //                     +"\tLongitude: "+ String(dataSplited[2]) 
-            //                     +"\tDepth: "+ String(dataSplited[3]) 
-            //                     +"\tTemp: "+ String(dataSplited[4]) 
-            //                     +"\tDO Value: "+ String(dataSplited[5]) +"</h4>");
-            //client.printf("DateTime: %s \tLatitude: %s \tLongitude: %s \tDepth: %s \tTemp: %s \tDO Value: %s", dataSplited[0], dataSplited[1], dataSplited[2], dataSplited[3], dataSplited[4], dataSplited[5]);
-            //client.println(dataString);
-            // client.print("<body><h6>\tLatitude:</h6>");
-            // client.print("<body><h6>\tLongitude:</h6>");
-            // client.print("<body><h6>\tDepth:</h6>");
-            // client.print("<body><h6>\tTemp:</h6>");
-            // client.print("<body><h6>\tDO Value:</h6>");
+            client.println("</body></html>");
+            client.println("<body><h4>Density of water (Kg/L): <input type = 'text' id='dataInput'></input></h4></body>");
 
+            
             // Display current state 
             client.println("<p>Sample - State " + sampleState + "</p>");
-            // If the output26State is off, it displays the ON button       
+            // If the sampleState is off, it displays the "Sample" button       
             if (sampleState=="off") {
-              client.println("<p><a href=\"/sample/on\"><button onclick='displayWait()' class=\"button\">Sample</button><script>function displayWait(){var button=document.getElementsByTagName('button')[0];button.innerHTML='Waiting...';}</script></a></p>");
+              //client.println("<p><a href=\"/sample/on\"><button onclick='displayWait()' class=\"button\">Sample</button><script>function displayWait(){var button=document.getElementsByTagName('button')[0];button.innerHTML='Waiting...';}</script></a></p>");
+              //client.println("<p><a href=\"/sample/on\"><button onclick='displayWait(); sendData();' class=\"button\">Sample</button><script>function sendData(){var input=document.getElementById('dataInput').value;var xhr=new XMLHttpRequest();xhr.open('POST','/sample/on',true);xhr.setRequestHeader('Content-type','application/x-www-form-urlencoded');xhr.send('dataInput='+input);}function displayWait(){var button=document.getElementsByTagName('button')[0];button.innerHTML='Waiting...';}</script></a></p>");
+              client.println("<p><a href=\"/sample/on\"><button onclick='displayWait(); sendData();' class=\"button\">Sample</button> \
+                              <script>function sendData(){ \
+                              var input=document.getElementById('dataInput').value; \
+                              var xhr=new XMLHttpRequest(); \
+                              xhr.open('POST','/sample/on',true); \
+                              xhr.setRequestHeader('Content-type','application/x-www-form-urlencoded'); \
+                              xhr.send('dataInput='+input);} \
+                              function displayWait(){ \
+                              var button=document.getElementsByTagName('button')[0]; \
+                              button.innerHTML='Waiting...';}</script></a></p>");
             } else {
               client.println("<p><a href=\"/sample/off\"><button class=\"button button2\">Reset</button></a></p>");
             } 

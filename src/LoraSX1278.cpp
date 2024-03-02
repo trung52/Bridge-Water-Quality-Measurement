@@ -38,22 +38,23 @@ void LoraSX1278_sendDataString(char *data, uint8_t dest_addr, uint8_t src_addr){
     log_i("Send packet completely!");
 }
 
-void LoraSX1278_requestData(uint8_t dest_addr, uint8_t src_addr, uint8_t request_byte_1, uint8_t request_byte_2){
+void LoraSX1278_requestData(uint8_t dest_addr, uint8_t src_addr, uint8_t request_byte_1, uint8_t request_byte_2, float _densityWater){
     LoRa.beginPacket();                   // start packet
     LoRa.write(dest_addr);              // add destination address
     LoRa.write(src_addr);             // add sender address
     LoRa.write(request_byte_1);        // add REQUEST_BYTE_1
     LoRa.write(request_byte_2);        // add REQUEST_BYTE_2
+    LoRa.print(_densityWater);
     LoRa.endPacket();                     // finish packet and send it
     Serial.println("Send request completely!");
 }
 
 ERROR_CODE LoraSX1278_receiveData(){
     int packetSize = LoRa.parsePacket();
-    uint32_t startReceive = millis();
+    long long startReceive = millis();
    // if (packetSize == 0) return;          // if there's no packet, return
     while(!packetSize){
-        if(millis()-startReceive > 20000){
+        if(millis()-startReceive >= 20000){
             return ERROR_LORA_SX1278_RECEIVE_TIMEOUT;
         }
         packetSize = LoRa.parsePacket();

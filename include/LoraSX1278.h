@@ -26,7 +26,7 @@
 #define ERROR_LORA_SX1278_RECEIVE_TIMEOUT 0x06
 
 // Packet structure sent from measurement device: DEST_ADDR | SRC_ADDR | DATA_LEN | DATA
-// Packet structure sent from bridge device: DEST_ADDR | SRC_ADDR | REQUEST_BYTE_1 | REQUEST_BYTE_2 
+// Packet structure sent from bridge device: DEST_ADDR | SRC_ADDR | REQUEST_BYTE_1 | REQUEST_BYTE_2 | DENSITY_WATER
 
 #include <LoRa.h>
 #include "configs.h"
@@ -61,8 +61,9 @@ void LoraSX1278_sendDataString(char *data, uint8_t dest_addr, uint8_t src_addr);
  * @param src_addr: source address
  * @param request_byte_1: request byte 1
  * @param request_byte_2: request byte 2
+ * @param _densityWater: density of Water (=1 with pure water)
 */
-void LoraSX1278_requestData(uint8_t dest_addr, uint8_t src_addr, uint8_t request_byte_1, uint8_t request_byte_2);
+void LoraSX1278_requestData(uint8_t dest_addr, uint8_t src_addr, uint8_t request_byte_1, uint8_t request_byte_2, float _densityWater);
 
 /**
  * @brief Receive data from measurement device
