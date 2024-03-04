@@ -2,14 +2,13 @@
 // Load Wi-Fi library
 #include <WiFi.h>
 #include "LoraSX1278.h"
-
+#include "Datastructure.h"
 // Replace with your network credentials
 const char* ssid     = "ESP32-Access-Point";
 const char* password = "123456789";
 
 // Set web server port number to 80
 WiFiServer server(80);
-
 
 // Variable to store the HTTP request
 String header;
@@ -18,7 +17,10 @@ String header;
 
 // Auxiliar variables to store the current output state
 String sampleState = "off";
-char* dataSplited[6];
+String getCSVFile = "off";
+
+String nameFileSaveData = "";
+
 String dateTime;
 String latitude;
 String longitude;
@@ -45,8 +47,12 @@ void setup() {
   String temp = "0";
   String DO_value = "0";
   LoraSX1278_Init();
-
-
+  if(!SPIFFS.begin(true)){
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    return;
+  }
+  Serial.println(SPIFFS.totalBytes());
+  Serial.println(SPIFFS.usedBytes());
 }
 
 void loop(){
@@ -63,12 +69,43 @@ void loop(){
         if (c == '\n') {                    // if the byte is a newline character
           // if the current line is blank, you got two newline characters in a row.
           // that's the end of the client HTTP request, so send a response:
+          if (header.indexOf("GET /get-csv") >= 0) {
+              getCSVFile = "on";
+              String currentLine = "";                // make a String to hold incoming data from the client
+
+              client.println("HTTP/1.1 200 OK");
+              // client.println("Content-Type: text/csv");
+              client.println("Content-Disposition: attachment; filename=" + nameFileSaveData + ".csv"); 
+              client.println("Connection: close");
+              client.print("Access-Control-Allow-Origin: *\r\n");
+              String locationFileSaveData = "/" + nameFileSaveData +".csv";
+              client.print("\r\n");
+              File file = SPIFFS.open(locationFileSaveData, FILE_READ);
+              if(file){
+                while(file.available()){
+                  client.write(file.read());
+                }
+                file.close();
+                SPIFFS_checkOutOfMemory();
+              }else{
+                client.println("File not found.");
+              }
+              client.println();
+              client.print("\r\n");
+
+              break;
+            }
+            else{
+              getCSVFile = "off";
+            }
+
           if (currentLine.length() == 0) {
             // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
             // and a content-type so the client knows what's coming, then a blank line:
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:text/html");
             client.println("Connection: close");
+            // client.println("Content-Disposition: attachment; filename=" + nameFileSaveData + ".csv"); 
             client.println();
             if (header.indexOf("POST /sample/on") >= 0) {
               // Read data from the client
@@ -90,16 +127,17 @@ void loop(){
                   sampleState = "timeout";
                 }
                 else {sampleState = "failed";}
-                dateTime = "0000-00-00T00:00:00";
-                latitude = "0.000000";
-                longitude = "0.000000";
-                depth = "0.0";
-                temp = "0.0";
-                DO_value = "0";
+                // dateTime = "0000-00-00T00:00:00";
+                // latitude = "0.000000";
+                // longitude = "0.000000";
+                // depth = "0.0";
+                // temp = "0.0";
+                // DO_value = "0";
               }
             }else if(header.indexOf("GET /sample/off") >= 0){
               sampleState = "off"; 
             }
+            
 
             // Display the HTML web page
             client.println("<!DOCTYPE html><html>");
@@ -116,12 +154,14 @@ void loop(){
             client.println("<body><h2>SPARC LAB & COMPA STEM</h2>");
             
             // Display sensor value
-            client.println("<body><h4>Date Time: " + dateTime 
-                                + "\tLatitude: "+ latitude 
-                                +"\tLongitude: "+ longitude 
-                                +"\tDepth: "+ depth + "mm"
-                                +"\tTemp: "+ temp + "oC"
-                                +"\tDO Value: "+ DO_value +"ug/L</h4>");
+            // client.println("<body><h4>Date Time: " + dateTime 
+            //                     + "\tLatitude: "+ latitude 
+            //                     +"\tLongitude: "+ longitude 
+            //                     +"\tDepth: "+ depth + "mm"
+            //                     +"\tTemp: "+ temp + "oC"
+            //                     +"\tDO Value: "+ DO_value +"ug/L</h4>");
+            client.println("<body><h4>STT | \tDate Time | \tLatitude | \tLongitude | \tDepth(mm) | \tTemp(oC) | \tDO Value(ug/L)</h4>");
+            displayDataList(client);
             client.println("</body></html>");
             client.println("<body><h4>Density of water (Kg/L): <input type = 'text' id='dataInput'></input></h4></body>");
 
@@ -129,9 +169,7 @@ void loop(){
             // Display current state 
             client.println("<p>Sample - State " + sampleState + "</p>");
             // If the sampleState is off, it displays the "Sample" button       
-            if (sampleState=="off") {
-              //client.println("<p><a href=\"/sample/on\"><button onclick='displayWait()' class=\"button\">Sample</button><script>function displayWait(){var button=document.getElementsByTagName('button')[0];button.innerHTML='Waiting...';}</script></a></p>");
-              //client.println("<p><a href=\"/sample/on\"><button onclick='displayWait(); sendData();' class=\"button\">Sample</button><script>function sendData(){var input=document.getElementById('dataInput').value;var xhr=new XMLHttpRequest();xhr.open('POST','/sample/on',true);xhr.setRequestHeader('Content-type','application/x-www-form-urlencoded');xhr.send('dataInput='+input);}function displayWait(){var button=document.getElementsByTagName('button')[0];button.innerHTML='Waiting...';}</script></a></p>");
+            if (sampleState=="off") {              
               client.println("<p><a href=\"/sample/on\"><button onclick='displayWait(); sendData();' class=\"button\">Sample</button> \
                               <script>function sendData(){ \
                               var input=document.getElementById('dataInput').value; \
@@ -145,7 +183,12 @@ void loop(){
             } else {
               client.println("<p><a href=\"/sample/off\"><button class=\"button button2\">Reset</button></a></p>");
             } 
-            
+            if (getCSVFile == "off"){
+              client.println("<p><a href=\"/get-csv\"><button class=\"button\">Dowload CSV File</button></a></p>");              
+            }
+            else{
+              client.println("<p><a href=\"/sample/off\"><button class=\"button button2\">Back</button></a></p>");
+            }
             // The HTTP response ends with another blank line
             client.println();
             // Break out of the while loop

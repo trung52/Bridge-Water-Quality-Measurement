@@ -1,4 +1,12 @@
 #include "LoraSX1278.h"
+char* dataSplited[6]; // poiter array to store data splited
+extern String dateTime;
+extern String latitude;
+extern String longitude;
+extern String depth;
+extern String temp;
+extern String DO_value;
+extern String nameFileSaveData;
 ERROR_CODE LoraSX1278_Init(){
     //DIO0 is optional
     LoRa.setPins(PIN_CS_RF_MODULE, PIN_RST_RF_MODULE, PIN_DIO0_RF_MODULE);
@@ -54,7 +62,8 @@ ERROR_CODE LoraSX1278_receiveData(){
     long long startReceive = millis();
    // if (packetSize == 0) return;          // if there's no packet, return
     while(!packetSize){
-        if(millis()-startReceive >= 20000){
+        if(millis()-startReceive >= 30000){
+            addDataToList("NULL");
             return ERROR_LORA_SX1278_RECEIVE_TIMEOUT;
         }
         packetSize = LoRa.parsePacket();
@@ -72,43 +81,52 @@ ERROR_CODE LoraSX1278_receiveData(){
 
     if (incomingDataLength != incomingData.length()) {   // check length for error
       Serial.println("Datalength does not match length.");
+      addDataToList("NULL");
       return ERROR_LORA_SX1278_DATA_LENGTH_MISMATCH;
     }
 
     // if the recipient isn't this device or broadcast,
     if (recipient != BRIDGE_DEVICE_ADDR && recipient != 0xFF) {
       Serial.println("This message is not for this device.");
+      addDataToList("NULL");
       return ERROR_LORA_SX1278_ADDR_MISMATCH;
     }
 
     //split dataString
-    char* token = strtok((char*)incomingData.c_str(), ",");
-    int count = 0;
-    while(token != NULL){
-        dataSplited[count] = token;
-        count++;
-        token = strtok(NULL, ",");
-    }
-    //sprintf(dataString,"DateTime: %s \tLatitude: %s \tLongitude: %s \tDepth: %s \tTemp: %s \tDO Value: %s", dataSplited[0], dataSplited[1], dataSplited[2], dataSplited[3], dataSplited[4], dataSplited[5]);
-    dateTime = dataSplited[0];
-    latitude = dataSplited[1];
-    longitude = dataSplited[2];
-    depth = dataSplited[3];
-    temp = dataSplited[4];
-    DO_value = dataSplited[5];
+    // char* token = strtok((char*)incomingData.c_str(), ",");
+    // int count = 0;
+    // while(token != NULL){
+    //     dataSplited[count] = token;
+    //     count++;
+    //     token = strtok(NULL, ",");
+    // }
+    // //sprintf(dataString,"DateTime: %s \tLatitude: %s \tLongitude: %s \tDepth: %s \tTemp: %s \tDO Value: %s", dataSplited[0], dataSplited[1], dataSplited[2], dataSplited[3], dataSplited[4], dataSplited[5]);
+    // dateTime = dataSplited[0];
+    // latitude = dataSplited[1];
+    // longitude = dataSplited[2];
+    // depth = dataSplited[3];
+    // temp = dataSplited[4];
+    // DO_value = dataSplited[5];
+
+    addDataToList(incomingData);
+    char* token = strtok((char*)incomingData.c_str(), "T");
+    dateTime = token;
+    nameFileSaveData = dateTime;
+    SPIFFS_saveStringDataToFile(nameFileSaveData, incomingData);
+
     // if message is for this device, or broadcast, print details:
-    Serial.println("Received from: 0x" + String(sender, HEX));
-    Serial.println("Sent to: 0x" + String(recipient, HEX));
-    Serial.println("Datalength: " + String(incomingDataLength));
-    Serial.println("DateTime: " + String(dataSplited[0]) 
-                                + "\tLatitue:" + String(dataSplited[1]) 
-                                + "\tLongitude:" + String(dataSplited[2])
-                                + "\tDepth:" + String(dataSplited[3])
-                                + "\tTemp:" + String(dataSplited[4])
-                                + "\tDO:" + String(dataSplited[5]));
-    Serial.println("RSSI: " + String(LoRa.packetRssi()));
-    Serial.println("Snr: " + String(LoRa.packetSnr()));
-    Serial.println();
+    // Serial.println("Received from: 0x" + String(sender, HEX));
+    // Serial.println("Sent to: 0x" + String(recipient, HEX));
+    // Serial.println("Datalength: " + String(incomingDataLength));
+    // Serial.println("DateTime: " + String(dataSplited[0]) 
+    //                             + "\tLatitue:" + String(dataSplited[1]) 
+    //                             + "\tLongitude:" + String(dataSplited[2])
+    //                             + "\tDepth:" + String(dataSplited[3])
+    //                             + "\tTemp:" + String(dataSplited[4])
+    //                             + "\tDO:" + String(dataSplited[5]));
+    // Serial.println("RSSI: " + String(LoRa.packetRssi()));
+    // Serial.println("Snr: " + String(LoRa.packetSnr()));
+    // Serial.println();
     return ERROR_NONE;
 }   
 

@@ -30,14 +30,9 @@
 
 #include <LoRa.h>
 #include "configs.h"
+#include "Datastructure.h"
 
-extern char* dataSplited[6]; // poiter array to store data splited
-extern String dateTime;
-extern String latitude;
-extern String longitude;
-extern String depth;
-extern String temp;
-extern String DO_value;
+
 //extern bool RF_requestData = false;
 /**
  * @brief Initialize LoraSX1278 module
